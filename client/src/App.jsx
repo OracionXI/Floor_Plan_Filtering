@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
+
+import names from "./imageFiles.json";
 
 const App = () => {
   const [image, setImage] = useState(null);
@@ -27,7 +29,9 @@ const App = () => {
   ];
 
   const fetchImageFromDatabase = () => {
-    setImage("/floor plans/10.png");
+    setImage(`/floorPlans/${names[3]}`);
+
+    console.log(names);
   };
 
   useEffect(() => {
