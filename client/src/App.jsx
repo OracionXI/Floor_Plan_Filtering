@@ -1,17 +1,22 @@
-import { useEffect, useState } from "react";
-import "./App.css";
 import axios from "axios";
+import { useEffect, useState } from "react";
 import * as Realm from "realm-web";
+import "./App.css";
+import names from "./imageFiles.json";
 
 const app = new Realm.App({ id: "data-xrfvv" });
-import names from "./imageFiles.json";
 
 const App = () => {
   const [image, setImage] = useState(null);
-  const [userName, setUserName] = useState("");
+  const [imageIndex, setImageIndex] = useState(0); // Track the current image index
+  const [userName, setUserName] = useState(
+    localStorage.getItem("userName") || ""
+  ); // Load username from localStorage
   const [token, setToken] = useState("");
 
-  // Define the colors in RGB format
+  const [yesCount, setYesCount] = useState(0);
+  const [noCount, setNoCount] = useState(0);
+
   const colors1 = [
     { name: "front door", rgb: "rgb(230, 25, 75)" }, // Strong Red
     { name: "interior door", rgb: "rgb(60, 180, 75)" }, // Strong Green
@@ -22,6 +27,7 @@ const App = () => {
     { name: "Dining Room", rgb: "rgb(70, 240, 240)" }, // Cyan
     { name: "Child Room", rgb: "rgb(240, 50, 230)" }, // Magenta
   ];
+
   const colors2 = [
     { name: "Study Room", rgb: "rgb(250, 190, 190)" }, // Pink
     { name: "Second Room", rgb: "rgb(255, 215, 180)" }, // Apricot
@@ -33,13 +39,53 @@ const App = () => {
     { name: "Exterior Area", rgb: "rgb(255, 255, 255)" }, // Gray
   ];
 
-  const fetchImageFromDatabase = () => {
-    setImage(`./floorPlans/${names[0]}`);
+  // Function to fetch the votes from MongoDB
+  const fetchVoteCounts = async () => {
+    const config = {
+      method: "post",
+      url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/find",
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Request-Headers": "*",
+        Authorization: `Bearer ${token}`,
+      },
+      data: JSON.stringify({
+        collection: "votes",
+        database: "cse400",
+        dataSource: "minframe",
+        filter: {}, // Fetch all documents
+      }),
+    };
+
+    try {
+      const response = await axios(config);
+      const votes = response.data.documents;
+
+      // Count the number of yes (true) and no (false) votes
+      const yesVotes = votes.filter((vote) => vote.voteAnswer === true).length;
+      const noVotes = votes.filter((vote) => vote.voteAnswer === false).length;
+
+      setYesCount(yesVotes);
+      setNoCount(noVotes);
+    } catch (err) {
+      console.error("Error fetching vote counts", err);
+    }
+  };
+
+  // Fetch vote counts when the component mounts
+  useEffect(() => {
+    if (token) {
+      fetchVoteCounts();
+    }
+  }, [token]);
+
+  const fetchImageFromDatabase = (index) => {
+    setImage(`./floorPlans/${names[index]}`);
   };
 
   useEffect(() => {
-    fetchImageFromDatabase();
-  }, []);
+    fetchImageFromDatabase(imageIndex); // Fetch the first image on load
+  }, [imageIndex]); // Refetch image whenever imageIndex changes
 
   useEffect(() => {
     loginEmailPassword("newcpalead2@gmail.com", "#AT22u3^sNn@ud").then((user) =>
@@ -50,11 +96,8 @@ const App = () => {
   const imageName = image ? image.split("/").pop() : "";
 
   async function loginEmailPassword(email, password) {
-    // Create an email/password credential
     const credentials = Realm.Credentials.emailPassword(email, password);
-    // Authenticate the user
     const user = await app.logIn(credentials);
-    // 'App.currentUser' updates to match the logged in user
     console.assert(user.id === app.currentUser.id);
     return user;
   }
@@ -89,6 +132,24 @@ const App = () => {
     }
   };
 
+  const handleVote = async (voteAnswer) => {
+    if (!userName) {
+      alert("Please enter a username before voting.");
+      return;
+    }
+    await createOne(voteAnswer);
+    setImageIndex((prevIndex) => (prevIndex + 1) % names.length);
+    // Refetch the vote counts to update the UI with the latest data
+    await fetchVoteCounts();
+  };
+
+  // Handle the change in username and store it in localStorage
+  const handleUsernameChange = (e) => {
+    const newUsername = e.target.value;
+    setUserName(newUsername);
+    localStorage.setItem("userName", newUsername); // Save the username locally
+  };
+
   return (
     <div className="main-container">
       <div className="left-container">
@@ -98,8 +159,15 @@ const App = () => {
           <input
             type="text"
             value={userName}
-            onChange={(e) => setUserName(e.target.value)}
+            onChange={handleUsernameChange} // Handle change
             className="uid"
+          ></input>
+          <h2>Image index</h2>
+          <input
+            type="number"
+            value={imageIndex}
+            className="uid"
+            onChange={(e) => setImageIndex(parseInt(e.target.value))}
           ></input>
         </div>
         <h2>Floor Design</h2>
@@ -111,13 +179,13 @@ const App = () => {
         <div className="button-group">
           <button
             className="yes-button"
-            onClick={async () => await createOne(true)}
+            onClick={async () => await handleVote(true)}
           >
             Yes
           </button>
           <button
             className="no-button"
-            onClick={async () => await createOne(false)}
+            onClick={async () => await handleVote(false)}
           >
             No
           </button>
@@ -148,7 +216,6 @@ const App = () => {
           {/* Second Column of Colors */}
           <div className="top1-container">
             <div className="color-group">
-              {/* Map through colors array to generate color items */}
               {colors2.map((color, index) => (
                 <div className="color-item" key={index}>
                   <div
@@ -162,7 +229,18 @@ const App = () => {
           </div>
         </div>
 
-        <div className="bottom-container"> hola </div>
+        <div className="bottom-container">
+          <h3>
+            <u>Vote Counts</u>
+          </h3>
+          <h4>
+            Yes: {yesCount} / {yesCount + noCount}
+          </h4>
+          <h4>
+            No: {noCount} / {yesCount + noCount}
+          </h4>
+          <h3>Pending: {names.length - (yesCount + noCount)}</h3>
+        </div>
       </div>
     </div>
   );

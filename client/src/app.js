@@ -1,4 +1,4 @@
-import { readdir, writeFile } from 'fs/promises';  // Import readdir and writeFile from fs/promises
+import { readdir, writeFile } from 'fs/promises'; // Import readdir and writeFile from fs/promises
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = join(__filename, '..');
 
 // Specify the folder path
-const folderPath = join(__dirname, '../public/floor_plans'); // Replace 'images' with your folder name
+const folderPath = join(__dirname, '../public/floorPlans'); // Replace 'images' with your folder name
 
 // Output file path for JSON export
 const outputFilePath = join(__dirname, 'imageFiles.json');

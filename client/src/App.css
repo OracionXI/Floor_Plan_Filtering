@@ -98,7 +98,7 @@
 
 .bottom-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   border: 5px solid #919191;
