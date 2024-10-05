@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import axios from "axios";
+import * as Realm from "realm-web";
 
+const app = new Realm.App({ id: "data-xrfvv" });
 import names from "./imageFiles.json";
 
 const App = () => {
   const [image, setImage] = useState(null);
+  const [userName, setUserName] = useState("");
+  const [token, setToken] = useState("");
 
   // Define the colors in RGB format
   const colors1 = [
@@ -29,16 +34,60 @@ const App = () => {
   ];
 
   const fetchImageFromDatabase = () => {
-    setImage(`/floorPlans/${names[3]}`);
-
-    console.log(names);
+    setImage(`./floorPlans/${names[0]}`);
   };
 
   useEffect(() => {
     fetchImageFromDatabase();
   }, []);
 
+  useEffect(() => {
+    loginEmailPassword("newcpalead2@gmail.com", "#AT22u3^sNn@ud").then((user) =>
+      setToken(user.accessToken)
+    );
+  }, []);
+
   const imageName = image ? image.split("/").pop() : "";
+
+  async function loginEmailPassword(email, password) {
+    // Create an email/password credential
+    const credentials = Realm.Credentials.emailPassword(email, password);
+    // Authenticate the user
+    const user = await app.logIn(credentials);
+    // 'App.currentUser' updates to match the logged in user
+    console.assert(user.id === app.currentUser.id);
+    return user;
+  }
+
+  const createOne = async (voteAnswer) => {
+    const config = {
+      method: "post",
+      url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/insertOne",
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Request-Headers": "*",
+        Authorization: `Bearer ${token}`,
+      },
+      data: JSON.stringify({
+        collection: "votes",
+        database: "cse400",
+        dataSource: "minframe",
+        document: {
+          username: userName,
+          imageName: imageName,
+          voteAnswer: voteAnswer,
+        },
+      }),
+    };
+
+    try {
+      const resp = await axios(config);
+      return resp;
+    } catch (err) {
+      console.error(err);
+      return { err: err };
+    }
+  };
 
   return (
     <div className="main-container">
@@ -46,7 +95,12 @@ const App = () => {
         {/* Left Container */}
         <div className="name-container">
           <h2>Username</h2>
-          <input type="text" className="uid"></input>
+          <input
+            type="text"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            className="uid"
+          ></input>
         </div>
         <h2>Floor Design</h2>
         <div className="image-box">
@@ -55,8 +109,18 @@ const App = () => {
         </div>
         <h3>{imageName}</h3>
         <div className="button-group">
-          <button className="yes-button">Yes</button>
-          <button className="no-button">No</button>
+          <button
+            className="yes-button"
+            onClick={async () => await createOne(true)}
+          >
+            Yes
+          </button>
+          <button
+            className="no-button"
+            onClick={async () => await createOne(false)}
+          >
+            No
+          </button>
         </div>
       </div>
 
