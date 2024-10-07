@@ -57,6 +57,7 @@ const App = () => {
         database: "cse400",
         dataSource: "minframe",
         filter: {}, // Fetch all documents
+        limit: 10000,
       }),
     };
 
@@ -188,13 +189,13 @@ const App = () => {
             className="A-button"
             onClick={async () => await handleVote("A")}
           >
-            A
+            High B
           </button>
           <button
             className="B-button"
             onClick={async () => await handleVote("B")}
           >
-            B
+            Low B
           </button>
           <button
             className="C-button"
@@ -206,7 +207,7 @@ const App = () => {
             className="no-button"
             onClick={async () => await handleVote("D")}
           >
-            No
+            <img className="poop" src={"/poop.svg"} alt="poop" />
           </button>
         </div>
       </div>
@@ -253,19 +254,18 @@ const App = () => {
             <u>Vote Counts</u>
           </h3>
           <h4>
-            A: {ACount} / {ACount + BCount + CCount + DCount}
+            High B: {ACount} / {ACount + BCount + CCount + DCount}
           </h4>
           <h4>
-            B: {BCount} / {ACount + BCount + CCount + DCount}
+            Low B: {BCount} / {ACount + BCount + CCount + DCount}
           </h4>
           <h4>
             C: {CCount} / {ACount + BCount + CCount + DCount}
           </h4>
           <h4>
-            No: {DCount} / {ACount + BCount + CCount + DCount}
+            Shit: {DCount} / {ACount + BCount + CCount + DCount}
           </h4>
           <h3>Pending: {names.length - (ACount + BCount + CCount + DCount)}</h3>
-          <h3>Check : {check} </h3>
         </div>
       </div>
     </div>
