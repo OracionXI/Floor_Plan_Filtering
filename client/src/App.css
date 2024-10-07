@@ -72,7 +72,7 @@
 }
 
 .no-button:hover{
-  background-color: rgb(219, 96, 96);
+  background-color: rgb(196, 91, 91);
   transition: 0.5s;
 }
 
@@ -82,6 +82,11 @@
   gap: 20px;
   justify-content: center;
   align-items: center;
+}
+
+.poop {
+  width: 25px;
+  height: 25px;
 }
 
 .uid{
