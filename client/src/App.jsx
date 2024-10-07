@@ -14,8 +14,11 @@ const App = () => {
   ); // Load username from localStorage
   const [token, setToken] = useState("");
 
-  const [yesCount, setYesCount] = useState(0);
-  const [noCount, setNoCount] = useState(0);
+  const [ACount, setACount] = useState(0);
+  const [BCount, setBCount] = useState(0);
+  const [CCount, setCCount] = useState(0);
+  const [DCount, setDCount] = useState(0);
+  const [check, setCheck] = useState("nope");
 
   const colors1 = [
     { name: "front door", rgb: "rgb(230, 25, 75)" }, // Strong Red
@@ -62,11 +65,15 @@ const App = () => {
       const votes = response.data.documents;
 
       // Count the number of yes (true) and no (false) votes
-      const yesVotes = votes.filter((vote) => vote.voteAnswer === true).length;
-      const noVotes = votes.filter((vote) => vote.voteAnswer === false).length;
+      const AVotes = votes.filter((vote) => vote.voteAnswer === "A").length;
+      const BVotes = votes.filter((vote) => vote.voteAnswer === "B").length;
+      const CVotes = votes.filter((vote) => vote.voteAnswer === "C").length;
+      const DVotes = votes.filter((vote) => vote.voteAnswer === "D").length;
 
-      setYesCount(yesVotes);
-      setNoCount(noVotes);
+      setACount(AVotes);
+      setBCount(BVotes);
+      setCCount(CVotes);
+      setDCount(DVotes);
     } catch (err) {
       console.error("Error fetching vote counts", err);
     }
@@ -178,14 +185,26 @@ const App = () => {
         <h3>{imageName}</h3>
         <div className="button-group">
           <button
-            className="yes-button"
-            onClick={async () => await handleVote(true)}
+            className="A-button"
+            onClick={async () => await handleVote("A")}
           >
-            Yes
+            A
+          </button>
+          <button
+            className="B-button"
+            onClick={async () => await handleVote("B")}
+          >
+            B
+          </button>
+          <button
+            className="C-button"
+            onClick={async () => await handleVote("C")}
+          >
+            C
           </button>
           <button
             className="no-button"
-            onClick={async () => await handleVote(false)}
+            onClick={async () => await handleVote("D")}
           >
             No
           </button>
@@ -234,12 +253,19 @@ const App = () => {
             <u>Vote Counts</u>
           </h3>
           <h4>
-            Yes: {yesCount} / {yesCount + noCount}
+            A: {ACount} / {ACount + BCount + CCount + DCount}
           </h4>
           <h4>
-            No: {noCount} / {yesCount + noCount}
+            B: {BCount} / {ACount + BCount + CCount + DCount}
           </h4>
-          <h3>Pending: {names.length - (yesCount + noCount)}</h3>
+          <h4>
+            C: {CCount} / {ACount + BCount + CCount + DCount}
+          </h4>
+          <h4>
+            No: {DCount} / {ACount + BCount + CCount + DCount}
+          </h4>
+          <h3>Pending: {names.length - (ACount + BCount + CCount + DCount)}</h3>
+          <h3>Check : {check} </h3>
         </div>
       </div>
     </div>
