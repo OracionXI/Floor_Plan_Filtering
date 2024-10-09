@@ -78,7 +78,7 @@
   cursor: pointer;
 }
 
-.show-count:hover{
+.show-count:hover {
   background-color: rgb(137, 182, 133);
 }
 
@@ -157,7 +157,7 @@
 
 .bottom-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   border: 5px solid #919191;

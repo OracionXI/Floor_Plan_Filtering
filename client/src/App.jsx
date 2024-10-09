@@ -265,6 +265,12 @@ const App = () => {
               ))}
             </ul>
           </div>
+          <h3>
+            ***Kindly check your allocated index before you start***{" "}
+            <a href="https://docs.google.com/spreadsheets/d/1vbZCGFp935GedNLVW1eOrsVNLEtvZcpczNb_lOmmrh8/edit?usp=sharing">
+              CLICK
+            </a>
+          </h3>
         </div>
       </div>
     </div>
