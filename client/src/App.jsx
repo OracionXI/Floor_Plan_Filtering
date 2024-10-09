@@ -18,7 +18,21 @@ const App = () => {
   const [BCount, setBCount] = useState(0);
   const [CCount, setCCount] = useState(0);
   const [DCount, setDCount] = useState(0);
-  const [check, setCheck] = useState("nope");
+  const [error, setError] = useState(false);
+
+  const [userTotalVotes, setUserTotalVotes] = useState(0);
+  const [lastThreeEntries, setLastThreeEntries] = useState([]);
+  const [lastThreeIndices, setLastThreeIndices] = useState(
+    JSON.parse(localStorage.getItem("lastThreeIndices")) || []
+  );
+
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayType, setOverlayType] = useState("success");
+  const [pendingCount, setPendingCount] = useState(0);
+  const [previousPendingCount, setPreviousPendingCount] = useState(null);
+  const [notUp, setNotup] = useState(false);
+  const [showCounts, setShowCounts] = useState(false);
+  const [ownCounts, setOwnCounts] = useState(false);
 
   const colors1 = [
     { name: "front door", rgb: "rgb(230, 25, 75)" }, // Strong Red
@@ -42,8 +56,8 @@ const App = () => {
     { name: "Exterior Area", rgb: "rgb(255, 255, 255)" }, // Gray
   ];
 
-  // Function to fetch the votes from MongoDB
   const fetchVoteCounts = async () => {
+    if (!token) return;
     const config = {
       method: "post",
       url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/find",
@@ -56,7 +70,7 @@ const App = () => {
         collection: "votes",
         database: "cse400",
         dataSource: "minframe",
-        filter: {}, // Fetch all documents
+        filter: {},
         limit: 10000,
       }),
     };
@@ -65,7 +79,6 @@ const App = () => {
       const response = await axios(config);
       const votes = response.data.documents;
 
-      // Count the number of yes (true) and no (false) votes
       const AVotes = votes.filter((vote) => vote.voteAnswer === "A").length;
       const BVotes = votes.filter((vote) => vote.voteAnswer === "B").length;
       const CVotes = votes.filter((vote) => vote.voteAnswer === "C").length;
@@ -75,40 +88,48 @@ const App = () => {
       setBCount(BVotes);
       setCCount(CVotes);
       setDCount(DVotes);
+
+      const totalVotes = AVotes + BVotes + CVotes + DVotes;
+      setPendingCount(names.length - totalVotes);
+      setError(false);
     } catch (err) {
       console.error("Error fetching vote counts", err);
+      setError(true);
     }
   };
 
-  // Fetch vote counts when the component mounts
-  useEffect(() => {
-    if (token) {
-      fetchVoteCounts();
+  const fetchUserData = async () => {
+    if (!token || !userName) return;
+    const config = {
+      method: "post",
+      url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/find",
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Request-Headers": "*",
+        Authorization: `Bearer ${token}`,
+      },
+      data: JSON.stringify({
+        collection: "votes",
+        database: "cse400",
+        dataSource: "minframe",
+        filter: { username: userName }, // Filter by username
+        sort: { _id: -1 }, // Sort by most recent
+        limit: 10000,
+      }),
+    };
+
+    try {
+      const response = await axios(config);
+      const userVotes = response.data.documents;
+      setUserTotalVotes(userVotes.length);
+
+      // Get the last 3 entries
+      const lastThree = userVotes.slice(0, 3).map((vote) => vote.imageName);
+      setLastThreeEntries(lastThree);
+    } catch (err) {
+      console.error("Error fetching user data", err);
     }
-  }, [token]);
-
-  const fetchImageFromDatabase = (index) => {
-    setImage(`./floorPlans/${names[index]}`);
   };
-
-  useEffect(() => {
-    fetchImageFromDatabase(imageIndex); // Fetch the first image on load
-  }, [imageIndex]); // Refetch image whenever imageIndex changes
-
-  useEffect(() => {
-    loginEmailPassword("newcpalead2@gmail.com", "#AT22u3^sNn@ud").then((user) =>
-      setToken(user.accessToken)
-    );
-  }, []);
-
-  const imageName = image ? image.split("/").pop() : "";
-
-  async function loginEmailPassword(email, password) {
-    const credentials = Realm.Credentials.emailPassword(email, password);
-    const user = await app.logIn(credentials);
-    console.assert(user.id === app.currentUser.id);
-    return user;
-  }
 
   const createOne = async (voteAnswer) => {
     const config = {
@@ -135,27 +156,120 @@ const App = () => {
       const resp = await axios(config);
       return resp;
     } catch (err) {
-      console.error(err);
+      setError(true);
+      console.error("Error inserting vote", err);
       return { err: err };
     }
   };
 
   const handleVote = async (voteAnswer) => {
     if (!userName) {
-      alert("Please enter a username before voting.");
+      alert(`Please enter a username before voting.`);
       return;
     }
-    await createOne(voteAnswer);
-    setImageIndex((prevIndex) => (prevIndex + 1) % names.length);
-    // Refetch the vote counts to update the UI with the latest data
-    await fetchVoteCounts();
+    const response = await createOne(voteAnswer);
+    if (response?.err || error) {
+      alert("Vote was not recorded. Please try again. ");
+      setOverlayType("error");
+      setShowOverlay(true);
+      setTimeout(() => setShowOverlay(false), 1000); // Hide overlay after 1 second
+      return;
+    }
+
+    if (!error) {
+      setOverlayType("success");
+      setShowOverlay(true);
+      setTimeout(() => setShowOverlay(false), 500); // Hide overlay after 1 second
+
+      setImageIndex((prevIndex) => {
+        const newIndex = (prevIndex + 1) % names.length;
+
+        const updatedIndices = [newIndex, ...lastThreeIndices].slice(0, 3);
+        setLastThreeIndices(updatedIndices);
+        localStorage.setItem(
+          "lastThreeIndices",
+          JSON.stringify(updatedIndices)
+        );
+
+        return newIndex;
+      });
+      await fetchVoteCounts();
+    }
   };
 
-  // Handle the change in username and store it in localStorage
   const handleUsernameChange = (e) => {
     const newUsername = e.target.value;
     setUserName(newUsername);
-    localStorage.setItem("userName", newUsername); // Save the username locally
+    localStorage.setItem("userName", newUsername);
+  };
+
+  const imageName = image ? image.split("/").pop() : "";
+
+  async function loginEmailPassword(email, password) {
+    const credentials = Realm.Credentials.emailPassword(email, password);
+    try {
+      const user = await app.logIn(credentials);
+      console.assert(user.id === app.currentUser.id);
+      return user;
+    } catch (err) {
+      console.error("Error logging in:", err);
+      setError(true);
+    }
+  }
+
+  const fetchImageFromDatabase = (index) => {
+    setImage(`./floorPlans/${names[index]}`);
+  };
+
+  useEffect(() => {
+    if (token && userName) {
+      fetchUserData();
+    }
+  }, [token, userName, imageIndex]);
+
+  useEffect(() => {
+    if (token && !error) {
+      fetchVoteCounts();
+    }
+  }, [token, error]);
+
+  useEffect(() => {
+    fetchImageFromDatabase(imageIndex); // Fetch the first image on load
+  }, [imageIndex]); // Refetch image whenever imageIndex changes
+
+  useEffect(() => {
+    loginEmailPassword("newcpalead2@gmail.com", "#AT22u3^sNn@ud").then((user) =>
+      setToken(user.accessToken)
+    );
+  }, []);
+
+  useEffect(() => {
+    if (
+      previousPendingCount !== null &&
+      previousPendingCount === pendingCount
+    ) {
+      setNotup(true);
+      alert(
+        "Refresh the page. And REMEMBER THE INDEX NUMBER! BHULE GELE MAIR!"
+      );
+    }
+    setPreviousPendingCount(pendingCount);
+  }, [pendingCount]);
+
+  const handleShowCounts = async () => {
+    setShowCounts(true);
+    await fetchVoteCounts();
+    setTimeout(() => {
+      setShowCounts(false);
+    }, 3000);
+  };
+
+  const handleOwnCounts = async () => {
+    setOwnCounts(true);
+    await fetchUserData();
+    setTimeout(() => {
+      setOwnCounts(false);
+    }, 3000);
   };
 
   return (
@@ -167,7 +281,7 @@ const App = () => {
           <input
             type="text"
             value={userName}
-            onChange={handleUsernameChange} // Handle change
+            onChange={handleUsernameChange}
             className="uid"
           ></input>
           <h2>Image index</h2>
@@ -180,32 +294,48 @@ const App = () => {
         </div>
         <h2>Floor Design</h2>
         <div className="image-box">
-          {/* Directly access the image from the public folder */}
           <img src={image} alt="Uploaded" className="uploaded-image" />
         </div>
-        <h3>{imageName}</h3>
+        <div className="legend-seg">
+          <h3>Name: {imageName}</h3>
+          <div className="legend-container">
+            <div
+              className={`overlay ${
+                showOverlay
+                  ? overlayType === "error"
+                    ? "error show-overlay"
+                    : "show-overlay"
+                  : ""
+              }`}
+            ></div>
+          </div>
+        </div>
         <div className="button-group">
           <button
             className="A-button"
             onClick={async () => await handleVote("A")}
+            disabled={pendingCount === 0 || notUp}
           >
             High B
           </button>
           <button
             className="B-button"
             onClick={async () => await handleVote("B")}
+            disabled={pendingCount === 0 || notUp}
           >
             Low B
           </button>
           <button
             className="C-button"
             onClick={async () => await handleVote("C")}
+            disabled={pendingCount === 0 || notUp}
           >
             C
           </button>
           <button
             className="no-button"
             onClick={async () => await handleVote("D")}
+            disabled={pendingCount === 0 || notUp}
           >
             <img className="poop" src={"/poop.svg"} alt="poop" />
           </button>
@@ -250,22 +380,52 @@ const App = () => {
         </div>
 
         <div className="bottom-container">
-          <h3>
-            <u>Vote Counts</u>
-          </h3>
-          <h4>
-            High B: {ACount} / {ACount + BCount + CCount + DCount}
-          </h4>
-          <h4>
-            Low B: {BCount} / {ACount + BCount + CCount + DCount}
-          </h4>
-          <h4>
-            C: {CCount} / {ACount + BCount + CCount + DCount}
-          </h4>
-          <h4>
-            Shit: {DCount} / {ACount + BCount + CCount + DCount}
-          </h4>
-          <h3>Pending: {names.length - (ACount + BCount + CCount + DCount)}</h3>
+          <div className="bl-container">
+            <h3>
+              <u>Vote Counts</u>
+            </h3>
+            {showCounts && (
+              <>
+                <h4>
+                  High B: {ACount} / {ACount + BCount + CCount + DCount}
+                </h4>
+                <h4>
+                  Low B: {BCount} / {ACount + BCount + CCount + DCount}
+                </h4>
+                <h4>
+                  C: {CCount} / {ACount + BCount + CCount + DCount}
+                </h4>
+                <h4>
+                  Shit: {DCount} / {ACount + BCount + CCount + DCount}
+                </h4>
+                <h4>Pending: {pendingCount}</h4>
+              </>
+            )}
+            <button className="show-count" onClick={handleShowCounts} disabled>
+              Show Counts
+            </button>
+          </div>
+
+          <div className="br-container">
+            <h3>
+              <u>User Data</u>
+            </h3>
+            <h4>Username: {userName}</h4>
+            <h4>
+              Total Votes: {ownCounts ? userTotalVotes : "Dekhamu na"}
+            </h4>
+            <button className="show-count" onClick={handleOwnCounts} disabled>
+              Own Counts
+            </button>
+            <h4>Last 3 Entries:</h4>
+            <ul>
+              {lastThreeEntries.map((entry, index) => (
+                <li key={index}>
+                  Index: {lastThreeIndices[index]-1 || "N/A"} (Image: {entry})
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
