@@ -53,7 +53,7 @@ const App = () => {
         Authorization: `Bearer ${token}`,
       },
       data: JSON.stringify({
-        collection: "votes",
+        collection: "votes1",
         database: "cse400",
         dataSource: "minframe",
         document: {
