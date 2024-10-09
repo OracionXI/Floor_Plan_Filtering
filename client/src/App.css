@@ -27,6 +27,7 @@
 }
 
 .image-box {
+  position: relative;
   border: 5px solid #919191;
   width: 550px;
   height: 550px;
@@ -40,6 +41,27 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  z-index: 1;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(108, 245, 95, 0.952);
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  z-index: 2;
+}
+
+.overlay.error {
+  background-color: rgb(247, 79, 79);
+}
+
+.show-overlay {
+  opacity: 1;
 }
 
 .button-group {
@@ -56,22 +78,26 @@
   cursor: pointer;
 }
 
-.A-button:hover{
+.show-count:hover{
+  background-color: rgb(137, 182, 133);
+}
+
+.A-button:hover {
   background-color: rgb(137, 182, 133);
   transition: 0.5s;
 }
 
-.B-button:hover{
+.B-button:hover {
   background-color: rgb(120, 175, 228);
   transition: 0.5s;
 }
 
-.C-button:hover{
+.C-button:hover {
   background-color: rgb(204, 228, 118);
   transition: 0.5s;
 }
 
-.no-button:hover{
+.no-button:hover {
   background-color: rgb(196, 91, 91);
   transition: 0.5s;
 }
@@ -89,9 +115,25 @@
   height: 25px;
 }
 
-.uid{
+.uid {
   height: 25px;
   width: 250px;
+}
+
+.legend-seg {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.legend-container {
+  height: 20px;
+  width: 20px;
+  border: #888 solid;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Right Container */
@@ -115,11 +157,25 @@
 
 .bottom-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
   border: 5px solid #919191;
   height: 50%;
+  gap: 100px;
+}
+
+.bl-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.br-container {
+  border-radius: 8px;
+  border: #95f395 solid;
+  padding: 10px 25px 15px 15px;
+  justify-content: center;
+  align-items: center;
 }
 
 .top1-container {
