@@ -13,26 +13,14 @@ const App = () => {
     localStorage.getItem("userName") || ""
   ); // Load username from localStorage
   const [token, setToken] = useState("");
-
-  const [ACount, setACount] = useState(0);
-  const [BCount, setBCount] = useState(0);
-  const [CCount, setCCount] = useState(0);
-  const [DCount, setDCount] = useState(0);
   const [error, setError] = useState(false);
 
-  const [userTotalVotes, setUserTotalVotes] = useState(0);
-  const [lastThreeEntries, setLastThreeEntries] = useState([]);
   const [lastThreeIndices, setLastThreeIndices] = useState(
     JSON.parse(localStorage.getItem("lastThreeIndices")) || []
   );
 
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayType, setOverlayType] = useState("success");
-  const [pendingCount, setPendingCount] = useState(0);
-  const [previousPendingCount, setPreviousPendingCount] = useState(null);
-  const [notUp, setNotup] = useState(false);
-  const [showCounts, setShowCounts] = useState(false);
-  const [ownCounts, setOwnCounts] = useState(false);
 
   const colors1 = [
     { name: "front door", rgb: "rgb(230, 25, 75)" }, // Strong Red
@@ -56,88 +44,12 @@ const App = () => {
     { name: "Exterior Area", rgb: "rgb(255, 255, 255)" }, // Gray
   ];
 
-  const fetchVoteCounts = async () => {
-    if (!token) return;
-    const config = {
-      method: "post",
-      url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/find",
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Request-Headers": "*",
-        Authorization: `Bearer ${token}`,
-      },
-      data: JSON.stringify({
-        collection: "votes",
-        database: "cse400",
-        dataSource: "minframe",
-        filter: {},
-        limit: 10000,
-      }),
-    };
-
-    try {
-      const response = await axios(config);
-      const votes = response.data.documents;
-
-      const AVotes = votes.filter((vote) => vote.voteAnswer === "A").length;
-      const BVotes = votes.filter((vote) => vote.voteAnswer === "B").length;
-      const CVotes = votes.filter((vote) => vote.voteAnswer === "C").length;
-      const DVotes = votes.filter((vote) => vote.voteAnswer === "D").length;
-
-      setACount(AVotes);
-      setBCount(BVotes);
-      setCCount(CVotes);
-      setDCount(DVotes);
-
-      const totalVotes = AVotes + BVotes + CVotes + DVotes;
-      setPendingCount(names.length - totalVotes);
-      setError(false);
-    } catch (err) {
-      console.error("Error fetching vote counts", err);
-      setError(true);
-    }
-  };
-
-  const fetchUserData = async () => {
-    if (!token || !userName) return;
-    const config = {
-      method: "post",
-      url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/find",
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Request-Headers": "*",
-        Authorization: `Bearer ${token}`,
-      },
-      data: JSON.stringify({
-        collection: "votes",
-        database: "cse400",
-        dataSource: "minframe",
-        filter: { username: userName }, // Filter by username
-        sort: { _id: -1 }, // Sort by most recent
-        limit: 10000,
-      }),
-    };
-
-    try {
-      const response = await axios(config);
-      const userVotes = response.data.documents;
-      setUserTotalVotes(userVotes.length);
-
-      // Get the last 3 entries
-      const lastThree = userVotes.slice(0, 3).map((vote) => vote.imageName);
-      setLastThreeEntries(lastThree);
-    } catch (err) {
-      console.error("Error fetching user data", err);
-    }
-  };
-
   const createOne = async (voteAnswer) => {
     const config = {
       method: "post",
       url: "https://ap-south-1.aws.data.mongodb-api.com/app/data-xrfvv/endpoint/data/v1/action/insertOne",
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Request-Headers": "*",
         Authorization: `Bearer ${token}`,
       },
       data: JSON.stringify({
@@ -179,21 +91,18 @@ const App = () => {
     if (!error) {
       setOverlayType("success");
       setShowOverlay(true);
-      setTimeout(() => setShowOverlay(false), 500); // Hide overlay after 1 second
+      setTimeout(() => setShowOverlay(false), 1000); // Hide overlay after 1 second
 
       setImageIndex((prevIndex) => {
         const newIndex = (prevIndex + 1) % names.length;
-
         const updatedIndices = [newIndex, ...lastThreeIndices].slice(0, 3);
         setLastThreeIndices(updatedIndices);
         localStorage.setItem(
           "lastThreeIndices",
           JSON.stringify(updatedIndices)
         );
-
         return newIndex;
       });
-      await fetchVoteCounts();
     }
   };
 
@@ -218,59 +127,23 @@ const App = () => {
   }
 
   const fetchImageFromDatabase = (index) => {
-    setImage(`./floorPlans/${names[index]}`);
+    const imagePath = `./floorPlans/${names[index]}`;
+    setImage(imagePath);
   };
 
   useEffect(() => {
-    if (token && userName) {
-      fetchUserData();
-    }
-  }, [token, userName, imageIndex]);
+    fetchImageFromDatabase(imageIndex);
+  }, [imageIndex]);
 
   useEffect(() => {
-    if (token && !error) {
-      fetchVoteCounts();
-    }
-  }, [token, error]);
-
-  useEffect(() => {
-    fetchImageFromDatabase(imageIndex); // Fetch the first image on load
-  }, [imageIndex]); // Refetch image whenever imageIndex changes
+    console.log(error);
+  }, []);
 
   useEffect(() => {
     loginEmailPassword("newcpalead2@gmail.com", "#AT22u3^sNn@ud").then((user) =>
       setToken(user.accessToken)
     );
   }, []);
-
-  useEffect(() => {
-    if (
-      previousPendingCount !== null &&
-      previousPendingCount === pendingCount
-    ) {
-      setNotup(true);
-      alert(
-        "Refresh the page. And REMEMBER THE INDEX NUMBER! BHULE GELE MAIR!"
-      );
-    }
-    setPreviousPendingCount(pendingCount);
-  }, [pendingCount]);
-
-  const handleShowCounts = async () => {
-    setShowCounts(true);
-    await fetchVoteCounts();
-    setTimeout(() => {
-      setShowCounts(false);
-    }, 3000);
-  };
-
-  const handleOwnCounts = async () => {
-    setOwnCounts(true);
-    await fetchUserData();
-    setTimeout(() => {
-      setOwnCounts(false);
-    }, 3000);
-  };
 
   return (
     <div className="main-container">
@@ -314,28 +187,28 @@ const App = () => {
           <button
             className="A-button"
             onClick={async () => await handleVote("A")}
-            disabled={pendingCount === 0 || notUp}
+            disabled={error}
           >
             High B
           </button>
           <button
             className="B-button"
             onClick={async () => await handleVote("B")}
-            disabled={pendingCount === 0 || notUp}
+            disabled={error}
           >
             Low B
           </button>
           <button
             className="C-button"
             onClick={async () => await handleVote("C")}
-            disabled={pendingCount === 0 || notUp}
+            disabled={error}
           >
             C
           </button>
           <button
             className="no-button"
             onClick={async () => await handleVote("D")}
-            disabled={pendingCount === 0 || notUp}
+            disabled={error}
           >
             <img className="poop" src={"/poop.svg"} alt="poop" />
           </button>
@@ -380,49 +253,15 @@ const App = () => {
         </div>
 
         <div className="bottom-container">
-          <div className="bl-container">
-            <h3>
-              <u>Vote Counts</u>
-            </h3>
-            {showCounts && (
-              <>
-                <h4>
-                  High B: {ACount} / {ACount + BCount + CCount + DCount}
-                </h4>
-                <h4>
-                  Low B: {BCount} / {ACount + BCount + CCount + DCount}
-                </h4>
-                <h4>
-                  C: {CCount} / {ACount + BCount + CCount + DCount}
-                </h4>
-                <h4>
-                  Shit: {DCount} / {ACount + BCount + CCount + DCount}
-                </h4>
-                <h4>Pending: {pendingCount}</h4>
-              </>
-            )}
-            <button className="show-count" onClick={handleShowCounts} disabled>
-              Show Counts
-            </button>
-          </div>
-
           <div className="br-container">
             <h3>
               <u>User Data</u>
             </h3>
             <h4>Username: {userName}</h4>
-            <h4>
-              Total Votes: {ownCounts ? userTotalVotes : "Dekhamu na"}
-            </h4>
-            <button className="show-count" onClick={handleOwnCounts} disabled>
-              Own Counts
-            </button>
             <h4>Last 3 Entries:</h4>
             <ul>
-              {lastThreeEntries.map((entry, index) => (
-                <li key={index}>
-                  Index: {lastThreeIndices[index]-1 || "N/A"} (Image: {entry})
-                </li>
+              {lastThreeIndices.map((entry, index) => (
+                <li key={index}>Index: {entry - 1}</li>
               ))}
             </ul>
           </div>
